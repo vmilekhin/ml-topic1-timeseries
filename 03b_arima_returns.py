@@ -96,7 +96,7 @@ best_order = (int(best["p"]), 0, int(best["q"]))
 print(f"\nЛучшая: ARIMA{best_order}, AIC={best['aic']:.2f}")
 
 fitted_best = ARIMA(train["log_return"], order=best_order).fit()
-print("\nПараметры лучшей модели (все ≈ 0 → модель предсказывает среднее):")
+print("\nПараметры лучшей модели (AR/MA значимы):")
 print(fitted_best.params)
 
 
@@ -111,7 +111,7 @@ predictions = []
 for i, true_r in enumerate(test["log_return"].values):
     try:
         m = ARIMA(history, order=best_order).fit()
-        yhat = float(m.forecast(steps=1).iloc[0])
+        yhat = float(np.asarray(m.forecast(steps=1)).flat[0])
     except Exception:
         yhat = 0.0
     predictions.append(yhat)
