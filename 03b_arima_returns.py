@@ -27,6 +27,7 @@ print("=" * 60)
 
 df = pd.read_csv("data/usdrub_clean_v2.csv", index_col=0, parse_dates=True)
 df = df[["price", "log_return"]].dropna()
+df.index.freq = "B"  # убирает ValueWarning от statsmodels
 
 print(f"Строк: {len(df)}")
 print(f"Период: {df.index[0].date()} — {df.index[-1].date()}")
@@ -94,6 +95,10 @@ best = results_df.iloc[0]
 best_order = (int(best["p"]), 0, int(best["q"]))
 print(f"\nЛучшая: ARIMA{best_order}, AIC={best['aic']:.2f}")
 
+fitted_best = ARIMA(train["log_return"], order=best_order).fit()
+print("\nПараметры лучшей модели (все ≈ 0 → модель предсказывает среднее):")
+print(fitted_best.params)
+
 
 # 6. Walk-forward one-step forecast
 print("\n" + "=" * 60)
@@ -138,12 +143,9 @@ print("8. ПЕРЕСЧЁТ В ЦЕНЫ")
 print("=" * 60)
 
 last_train_price = train["price"].iloc[-1]
-prices = []
-prev = last_train_price
-for r in pred.values:
-    prev = prev * np.exp(r)
-    prices.append(prev)
-price_pred = pd.Series(prices, index=test.index)
+# p̂_t = p_{t-1, actual} · exp(r̂_t)
+price_pred = test["price"].shift(1) * np.exp(pred)
+price_pred.iloc[0] = last_train_price * np.exp(pred.iloc[0])
 
 naive_price = test["price"].shift(1)
 naive_price.iloc[0] = last_train_price
